@@ -53,7 +53,7 @@ void i2c_init(void)
     I2C1->CR1 |= CR1_PE;
 }
 
-void i2c1_byte_read(char saddr, char maddr, char *data)
+void i2c1_byte_read(char saddr, char maddr, uint8_t *data)
 {
     volatile int tmp;
     (void)tmp; // Silence unused warning, since tmp is only used for reading/clearing registers
@@ -96,7 +96,7 @@ void i2c1_byte_read(char saddr, char maddr, char *data)
     *data++ = I2C1->DR;
 }
 
-void i2c1_burst_read(char saddr, char maddr, int n, char *data)
+void i2c1_burst_read(char saddr, char maddr, int n, uint8_t *data)
 {
     volatile int tmp;
     (void)tmp; // Silence unused warning, only used for reading/clearing registers
@@ -150,7 +150,7 @@ void i2c1_burst_read(char saddr, char maddr, int n, char *data)
     }
 }
 
-void i2c1_burst_write(char saddr, char maddr, int n, char *data)
+void i2c1_burst_write(char saddr, char maddr, int n, uint8_t *data)
 {
     volatile int tmp;
     (void)tmp; // Silence unused warning, only used for reading/clearing registers

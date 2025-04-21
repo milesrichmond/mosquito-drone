@@ -48,7 +48,9 @@ set(PROJECT_DEFINES # LIST COMPILER DEFINITIONS HERE
 )
 
 set(PROJECT_INCLUDES # LIST INCLUDE DIRECTORIES HERE
-    ${CMAKE_SOURCE_DIR}/include)
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/CMSIS/Device/ST/STM32F1xx/Include
+    ${CMAKE_SOURCE_DIR}/include/CMSIS/Include)
 
 # ########### MODIFY ACCORDING TO REQUIREMENTS) ########################
 
