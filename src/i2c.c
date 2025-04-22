@@ -25,7 +25,7 @@
 #define CR1_STOP    (1U<<9)
 #define CR1_ACK	    (1U<<10)
 
-void i2c_init(void)
+void i2c1_init(void)
 {
     RCC->APB2ENR |= GPIOBEN;
 
@@ -55,7 +55,7 @@ void i2c_init(void)
 
 void i2c1_byte_read(char saddr, char maddr, uint8_t *data)
 {
-    volatile int tmp;
+    volatile int tmp = 0;
     (void)tmp; // Silence unused warning, since tmp is only used for reading/clearing registers
 
     /* Wait until bus is not busy */
@@ -98,7 +98,7 @@ void i2c1_byte_read(char saddr, char maddr, uint8_t *data)
 
 void i2c1_burst_read(char saddr, char maddr, int n, uint8_t *data)
 {
-    volatile int tmp;
+    volatile int tmp = 0;
     (void)tmp; // Silence unused warning, only used for reading/clearing registers
     
     while (I2C1->SR2 & (SR2_BUSY)){}
@@ -152,7 +152,7 @@ void i2c1_burst_read(char saddr, char maddr, int n, uint8_t *data)
 
 void i2c1_burst_write(char saddr, char maddr, int n, uint8_t *data)
 {
-    volatile int tmp;
+    volatile int tmp = 0;
     (void)tmp; // Silence unused warning, only used for reading/clearing registers
     
     while (I2C1->SR2 & (SR2_BUSY)){}
