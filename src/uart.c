@@ -1,60 +1,87 @@
+/*
+ * uart.c
+ *
+ *  Created on: Jan 19, 2023
+ *      Author: hussamaldean
+ */
+
+
+
+#define Perpher_CLK 8000000
+#define Baudrate	115200
+
 #include "uart.h"
-#include <stdint.h>
+#include "stm32f1xx.h"
 
-
-#define GPIOAEN	    (1U<<2)
-#define UART1EN	    (1U<<14)
-
-#define DBG_UART_BAUDRATE   (115200)
-#define SYS_FREQ	    (72000000)
-#define APB1_CLK	    (SYS_FREQ)
-#define CR1_TE		    (1U<<3)
-#define CR1_UE		    (1U<<13)
-#define SR_TXE		    (1U<<7)
-
-static void uart_set_baudrate(uint32_t periph_clk, uint32_t baudrate);
-static void uart_write(int ch);
-
-void dummy(void)
+static uint16_t compute_uart_bd(uint32_t PeriphClk, uint32_t BaudRate)
 {
-    uart_write(0);
+	return ((PeriphClk + (BaudRate/2U))/BaudRate);
 }
 
-void uart_init(void)
+
+static void uart_set_baudrate(USART_TypeDef *USARTx, uint32_t PeriphClk,  uint32_t BaudRate)
 {
-    RCC->APB1ENR |= GPIOAEN;
-
-    /* Set to alternate function */
-    // USARTx_TX -> Alt func push-pull (pg 166)
-    // target pin PA9
-    GPIOA->CRH |= (1U<<7);
-    GPIOA->CRH &= ~(1U<<6);
-    GPIOA->CRH |= (1U<<5);
-    GPIOA->CRH |= (1U<<4);
-
-    RCC->APB2ENR |= UART1EN;
-
-    uart_set_baudrate(APB1_CLK, DBG_UART_BAUDRATE);
-
-    /* configure tranfer direction */
-    USART1->CR1 = CR1_TE;
-
-    USART1->CR1 |= CR1_UE;
+	USARTx->BRR =  compute_uart_bd(PeriphClk,BaudRate);
 }
 
-static void uart_write(int ch)
-{
-    while (!(USART1->SR & SR_TXE)){}
 
-    USART1->DR = (ch & 0xFF);
+
+
+
+void uart2_write(int ch)
+{
+  /*Make sure the transmit data register is empty*/
+	while(!(USART2->SR & USART_SR_TXE)){}
+
+  /*Write to transmit data register*/
+	USART2->DR	=  (ch & 0xFF);
 }
 
-static uint16_t compute_uart_bd(uint32_t periph_clk, uint32_t baudrate)
-{
-    return ((periph_clk + (baudrate / 2U)) / baudrate);
-}
+ int __io_putchar(int ch) {
+	 uart2_write(ch);
+	 return ch;
 
-static void uart_set_baudrate(uint32_t periph_clk, uint32_t baudrate)
+ }
+
+
+void uart2_init()
 {
-    USART1->BRR = compute_uart_bd(periph_clk, baudrate);
+
+
+
+	/*UART2 Pin configures*/
+
+	//enable clock access to GPIOA
+	RCC->APB2ENR|=RCC_APB2ENR_IOPAEN;
+	//Enable clock access to alternate function
+	RCC->APB2ENR|=RCC_APB2ENR_AFIOEN;
+
+	/*Confgiure PA2 as output maximum speed to 50MHz
+	 * and alternate output push-pull mode*/
+	GPIOA->CRL|=GPIO_CRL_MODE2;
+
+	GPIOA->CRL|=GPIO_CRL_CNF2_1;
+	GPIOA->CRL&=~GPIO_CRL_CNF2_0;
+
+
+	/*Don't remap the pins*/
+	AFIO->MAPR&=~AFIO_MAPR_USART2_REMAP;
+
+
+	/*USART2 configuration*/
+
+	//enable clock access to USART2
+
+	RCC->APB1ENR|=RCC_APB1ENR_USART2EN;
+
+	//Transmit Enable
+	USART2->CR1 |= USART_CR1_TE;
+
+	/*Set baudrate */
+	uart_set_baudrate(USART2,Perpher_CLK,Baudrate);
+
+	//Enable UART
+	USART2->CR1 |= USART_CR1_UE;
+
+
 }

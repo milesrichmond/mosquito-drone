@@ -1,23 +1,14 @@
 #include "util.h"
 
-void msq_write(uint32_t target, uint8_t offset, uint8_t state)
+#include <math.h>
+
+/* Q8.8 fixed point for the time being */
+int16_t approx_altitude(uint8_t pressure_hPa)
 {
-    if (state) {
-	target |= (1U<<offset);
-    } else {
-	target &= ~(1U<<offset);
-    }
+    return 0;
 }
 
-void msq_write16()
-
-
-void mosquito_write16(uint16_t target, char offset, char *data)
+double noaa_altitude(float pressure_hPa)
 {
-
-}
-
-void mosquito_write32(uint32_t target, char offset, char *data)
-{
-
+    return 44307.69 * (1 - powf(pressure_hPa, 0.190284));
 }

@@ -1,183 +1,239 @@
 #include "i2c.h"
 #include "stm32f103x6.h"
 
-// --- ADDR DEFINES ---
+#include <stdio.h>
 
-#define GPIOBEN			(1U<<3)
-#define I2C1EN			(1U<<21)
-#define I2C1_CR2_FREQ		(0b01000) // 8
-#define I2C_CCR			(0x28)
-#define SD_MODE_MAX_RISE_TIME	(0b01001) // 9
+/* INITIALIZATION */
 
-// SR1
-#define SR1_SB	    (1U<<0)
-#define SR1_ADDR    (1U<<1)
-#define SR1_BTF	    (1U<<2)
-#define SR1_RXNE    (1U<<6)
-#define SR1_TXE	    (1U<<7)
-
-// SR2
-#define SR2_BUSY    (1U<<1)
-
-// CR1
-#define CR1_PE	    (1U<<0)
-#define CR1_START   (1U<<8)
-#define CR1_STOP    (1U<<9)
-#define CR1_ACK	    (1U<<10)
-
+/* Alter by microcontroller */
 void i2c1_init(void)
 {
-    RCC->APB2ENR |= GPIOBEN;
+    /*------Setting up GPIO PIN B6 and B7------*/
 
-    // Since we want a bidirectional alternate function, it will be output
-    // Alternate function output Open-drain, max speed 10 MHz
-    GPIOB->CRL &= ~(1U<<29);
-    GPIOB->CRL |= (1U<<28);
-    GPIOB->CRL |= (1U<<31);
-    GPIOB->CRL |= (1U<<30);
-    
-    // We do not have access to pull-up resistors, so idk
-    // if we need to enable them or not
+    /*Enable clock access to GPIOB*/
+    RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
 
-    RCC->APB2ENR |= I2C1EN;
+    /*Set PB6 to output 50MHz*/
+    GPIOB->CRL |= GPIO_CRL_MODE6;
+    /*Set PB6 to ALternate Open drain*/
+    GPIOB->CRL |= GPIO_CRL_CNF6;
 
-    // Software Reset
-    I2C1->CR1 |= (1U<<15);
-    I2C1->CR1 &= ~(1U<<15);
+    /*Set PB7 to output 50MHz*/
+    GPIOB->CRL |= GPIO_CRL_MODE7;
+    /*Set PB7 to ALternate Open drain*/
+    GPIOB->CRL |= GPIO_CRL_CNF7;
 
-    I2C1->CR2 |= I2C1_CR2_FREQ; // 8 MHz FREQ
-    I2C1->CCR |= I2C_CCR;	// Should now be targeting 100 kHz
+    /*Enable clock access to alternate function of the pins*/
+    RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
 
-    I2C1->TRISE = SD_MODE_MAX_RISE_TIME;
+    /*-----------------------------------------*/
 
-    I2C1->CR1 |= CR1_PE;
+    /*------------Setting up I2C---------------*/
+
+    /*Enable clock access to I2C1*/
+    RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
+
+    /*Set the frequency register to 00000*/
+    I2C1->CR2 &= ~(I2C_CR2_FREQ);
+
+    /*Tell the peripheral that the clock is 8MHz(125ns)(T_CPLK1)*/ /*note: Allowed frequency Range is 2Mhz to 50Mhz*/
+    I2C1->CR2 |= (8<<I2C_CR2_FREQ_Pos);
+
+    /*Set the rise time to 1000ns(standard mode)*/
+    /*(maximum rise time) = (T_CPLK1) * (TRISE - 1)*/
+    I2C1->TRISE=0x9;
+
+    /*Set the CCR*/
+    /*T_high = CCR T_CPLK1*/
+    /*T_low = CCR T_CPLK1*/
+    I2C1->CCR|=0x28;
+
+    /*Enable the peripheral*/
+    I2C1->CR1 |= I2C_CR1_PE;
+
+    /*-----------------------------------------*/
 }
 
-void i2c1_byte_read(char saddr, char maddr, uint8_t *data)
+void i2c_init_port(uint8_t port_number)
 {
+    switch (port_number)
+    {
+	case 1:
+	    i2c1_init();
+	    break;
+    }
+}
+
+
+/* BUS ACTIONS */
+
+void i2c_scan_bus(I2C_TypeDef *i2c_channel)
+{
+    for (uint8_t i = 0; i < 128; i++)
+    {
+	i2c_channel->CR1 |= I2C_CR1_START;
+	while(!(i2c_channel->SR1 & I2C_SR1_SB));
+	
+	i2c_channel->DR = (i << 1|0);
+	while(!(i2c_channel->SR1)|!(i2c_channel->SR2));
+
+	i2c_channel->CR1 |= I2C_CR1_STOP;
+	for(int k = 0; k < 300; k++);
+
+	if ((i2c_channel->SR1 & I2C_SR1_ADDR) == 2)
+	{
+	    printf("Found I2C device at address 0x%X (hexadecimal), or %d (decimal)\n\r", i, i);
+	    fflush(stdout);
+	}
+    }
+}
+
+void i2c_byte_read(uint32_t i2c_port_addr, int8_t saddr, int8_t maddr, uint8_t *data)
+{
+    I2C_TypeDef *i2c_channel = (I2C_TypeDef *)i2c_port_addr;
     volatile int tmp = 0;
-    (void)tmp; // Silence unused warning, since tmp is only used for reading/clearing registers
+    (void)tmp;
 
-    /* Wait until bus is not busy */
-    while (I2C1->SR1 & (SR2_BUSY)){}
+    /* wait for empty bus */
+    while (i2c_channel->SR2 & I2C_SR2_BUSY);
 
-    I2C1->CR1 |= CR1_START;
+    /* start flag */
+    i2c_channel->CR1 |= I2C_CR1_START;
+    while (!(i2c_channel->SR1 & I2C_SR1_SB));
 
-    /* Wait for start flag to be set */
-    while (!(I2C1->SR1 & (SR1_ADDR))){}
+    /* slave address */
+    i2c_channel->DR = saddr << 1;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
 
-    /* Transmit slave address + write */
-    I2C1->DR = saddr << 1;
+    /* clear ADDR flag */
+    tmp = i2c_channel->SR2;
 
-    while (!(I2C1->SR1 & (SR1_ADDR))){}
+    /* wait for empty transmitter */
+    while (!(i2c_channel->SR1 & I2C_SR1_TXE));
 
-    tmp = I2C1->SR2;
+    /* transmit device memory address */
+    i2c_channel->DR = maddr;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
 
-    I2C1->DR = maddr;
+    /* start flag */
+    i2c_channel->CR1 |= I2C_CR1_START;
+    while (!(i2c_channel->SR1 & I2C_SR1_SB));
 
-    while (!(I2C1->SR1 & (SR1_TXE))){}
+    /* slave address + read */
+    i2c_channel->DR = saddr << 1|1;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
 
-    I2C1->CR1 |= CR1_START;
+    i2c_channel->CR1 &= ~(I2C_CR1_ACK);
+    tmp = i2c_channel->SR2;
 
-    while (!(I2C1->SR1 & (SR1_SB))){}
+    /* stop flag */
+    i2c_channel->CR1 |= I2C_CR1_STOP;
 
-    I2C1->DR = saddr << 1 | 1;
-
-    while (!(I2C1->SR1 & (SR1_ADDR))){}
-
-    I2C1->CR1 &= ~CR1_ACK;
-
-    tmp = I2C1->SR2;
-
-    I2C1->CR1 |= CR1_STOP;
-
-    while (!(I2C1->SR1 & SR1_RXNE)){}
+    /* wait for RXNE flag */
+    while (!(i2c_channel->SR1 & I2C_SR1_RXNE));
 
     *data++ = I2C1->DR;
+
 }
 
-void i2c1_burst_read(char saddr, char maddr, int n, uint8_t *data)
+void i2c_burst_read(uint32_t i2c_port_addr, int8_t saddr, int8_t maddr, int n, uint8_t *data)
 {
+    I2C_TypeDef *i2c_channel = (I2C_TypeDef *)i2c_port_addr;
     volatile int tmp = 0;
-    (void)tmp; // Silence unused warning, only used for reading/clearing registers
+    (void)tmp; /* silence warning, since temp is only used to read from registers to clear them */
     
-    while (I2C1->SR2 & (SR2_BUSY)){}
+    /* wait for empty bus */
+    while (i2c_channel->SR2 & I2C_SR2_BUSY);
 
-    I2C1->CR1 |= CR1_START;
+    /* start flag */
+    i2c_channel->CR1 |= I2C_CR1_START;
+    while (!(i2c_channel->SR1 & I2C_SR1_SB));
 
-    while (!(I2C1->SR1 & SR1_SB)){}
+    /* slave address */
+    i2c_channel->DR = saddr << 1;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
+    
+    /* clear ADDR flag */
+    tmp = i2c_channel->SR2;
 
-    I2C1->DR = saddr << 1;
+    /* wait for empty transmitter */
+    while (!(i2c_channel->SR1 & I2C_SR1_TXE));
 
-    while (!(I2C1->SR1 & SR1_ADDR)){}
+    /* Send memory address */
+    i2c_channel->DR = maddr;
+    while (!(i2c_channel->SR1 & I2C_SR1_TXE));
 
-    tmp = I2C1->SR2;
+    /* start flag */
+    i2c_channel->CR1 |= I2C_CR1_START;
+    while (!(i2c_channel->SR1 & I2C_SR1_SB));
 
-    while (!(I2C1->SR1 & SR1_TXE)){}
+    /* slave address + read */
+    i2c_channel->DR = saddr << 1 | 1;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
 
-    I2C1->CR1 |= CR1_START;
+    /* clear ADDR flag */
+    tmp = i2c_channel->SR2;
 
-    while (!(I2C1->SR1 & SR1_SB)){}
+    i2c_channel->CR1 |= I2C_CR1_ACK;
 
-    I2C1->DR = saddr << 1 | 1;
-
-    while (!(I2C1->SR1 & (SR1_ADDR))){}
-
-    tmp = I2C1->SR2;
-
-    I2C1->CR1 |= CR1_ACK;
-
+    /* continuously read bytes */
     while (n > 0U)
     {
-	// Stop condition
+	/* stop condition */
 	if (n == 1U)
 	{
-	    I2C1->CR1 &= ~CR1_ACK;
+	    i2c_channel->CR1 &= ~(I2C_CR1_ACK);
+	    i2c_channel->CR1 |= I2C_CR1_STOP;
 
-	    I2C1->CR1 |= CR1_STOP;
+	    while (!(i2c_channel->SR1 & I2C_SR1_RXNE));
 
-	    while (!(I2C1->SR1 & SR1_RXNE)){}
-
-	    *data++ = I2C1->DR;
+	    *data++ = i2c_channel->DR;
 	    break;
-	} else {
-	    while (!(I2C1->SR1 & SR1_RXNE)){}
-
-	    (*data++) = I2C1->DR;
-
+	}
+	else
+	{
+	    while (!(i2c_channel->SR1 & I2C_SR1_RXNE));
+	    
+	    *data++ = i2c_channel->DR;
 	    n--;
 	}
     }
 }
 
-void i2c1_burst_write(char saddr, char maddr, int n, uint8_t *data)
+void i2c_burst_write(uint32_t i2c_port_addr, int8_t saddr, int8_t maddr, int n, uint8_t *data)
 {
+    I2C_TypeDef *i2c_channel = (I2C_TypeDef *)i2c_port_addr;
     volatile int tmp = 0;
-    (void)tmp; // Silence unused warning, only used for reading/clearing registers
+    (void)tmp; /* silence warning, used for reading a register to clear it. */
     
-    while (I2C1->SR2 & (SR2_BUSY)){}
+    while(i2c_channel->SR2 & I2C_SR2_BUSY);
 
-    I2C1->CR1 |= CR1_START;
+    /* start flag */
+    i2c_channel->CR1 |= I2C_CR1_START;
+    while (!(i2c_channel->SR1 & I2C_SR1_SB));
 
-    while (!(I2C1->SR1 & (SR1_SB))){}
+    /* slave address */
+    i2c_channel->DR = saddr << 1;
+    while (!(i2c_channel->SR1 & I2C_SR1_ADDR));
 
-    I2C1->DR = saddr << 1;
+    /* clear addr flag */
+    tmp = i2c_channel->SR2;
 
-    while (!(I2C1->SR1 & (SR1_ADDR))){}
+    /* wait for empty data register */
+    while (!(i2c_channel->SR1 & (I2C_SR1_TXE)));
 
-    tmp = I2C1->SR2;
+    /* send memory address */
+    i2c_channel->DR = maddr;
 
-    while (!(I2C1->SR1 & (SR1_TXE))){}
+    /* continuously transmit bytes */ 
+    for (int i = 0; i < n; i++)
+    {
+	while (!(i2c_channel->SR1 & (I2C_SR1_TXE)));
 
-    I2C1->DR = maddr;
-
-    for (int i = 0; i < n; i++) {
-	while (!(I2C1->SR1 & (SR1_TXE))){}
-
-	I2C1->DR = *data++;
+	i2c_channel->DR = *data++;
     }
 
-    while (!(I2C1->SR1 & (SR1_BTF))){}
-
-    I2C1->CR1 |= CR1_STOP;
+    /* Stop transmission */
+    while (!(i2c_channel->SR1 & (I2C_SR1_BTF)));
+    i2c_channel->CR1 |= I2C_CR1_STOP;
 }
