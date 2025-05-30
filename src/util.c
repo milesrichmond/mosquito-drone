@@ -10,5 +10,5 @@ int16_t approx_altitude(uint8_t pressure_hPa)
 
 double noaa_altitude(float pressure_hPa)
 {
-    return 44307.69 * (1 - powf(pressure_hPa, 0.190284));
+    return 145366.45 * (1 - powf(pressure_hPa / 1013.25, 0.190284));
 }

@@ -5,6 +5,7 @@
 
 #include "i2c.h"
 #include "adafruit-BNO055.h"
+#include "util.h"
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -61,6 +62,7 @@ int main(void)
     long poll_count = 0;
     float temperature = 0.0f;
     float pressure = 0.0f;
+    float altitude = 0.0f;
 
     while (1)
     {
@@ -69,9 +71,13 @@ int main(void)
 	bmp390_get_temperature(&temperature);
 	bmp390_get_pressure(&pressure);
 
-	printf("%ld:\t x: %.2f, y: %.2f, z: %.2f\n", poll_count, acc_buffer[0], acc_buffer[1], acc_buffer[2]);
-	printf("%ld:\t %f degrees\n", poll_count, temperature);
-	printf("\t%f Pa (%f mbar)\n", pressure, pressure / 100);
+	//printf("%ld:\t x: %.2f, y: %.2f, z: %.2f\n", poll_count, acc_buffer[0], acc_buffer[1], acc_buffer[2]);
+	//printf("%ld:\t %f degrees\n", poll_count, temperature);
+	//printf("\t%f Pa (%f mbar)\n", pressure, pressure / 100.0f);
+
+	altitude = noaa_altitude(pressure / 100);
+
+	printf("Altitude (NOAA): %lf ft\n", altitude);
 	fflush(stdout);
 	poll_count++;
     }
