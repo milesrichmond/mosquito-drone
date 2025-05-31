@@ -45,11 +45,11 @@ set(PROJECT_SOURCES # LIST SOURCE FILES HERE
     Startup/startup_stm32f103c8tx.s
     src/main.c
     src/sysmem.c
+    src/debug.c
+    src/util.c
     src/i2c.c
     src/adafruit-BNO055.c
-    src/uart.c
-    src/bmp390.c
-    src/util.c)
+    src/bmp390.c)
 
 set(PROJECT_DEFINES # LIST COMPILER DEFINITIONS HERE
     DEBUG)

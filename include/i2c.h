@@ -2,7 +2,14 @@
 #define I2C_H
 
 #include "stm32f103x6.h"
+#include "types.h"
 #include <stdint.h>
+
+void i2c_init(i2c_bus_t bus);
+void i2c_scan(i2c_bus_t bus);
+void i2c_read(i2c_bus_t bus, uint8_t device_addr, uint8_t mem_addr, int bytes, uint8_t *data);
+void i2c_write(i2c_bus_t bus, uint8_t device_addr, uint8_t mem_addr, int bytes, uint8_t *data);
+
 
 void i2c_init_port(uint8_t port_number);
 void i2c1_init(void);

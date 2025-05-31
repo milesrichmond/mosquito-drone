@@ -2,6 +2,193 @@
 #include "stm32f103x6.h"
 
 #include <stdio.h>
+#include "debug.h"
+
+/**
+ *  Enables clock access to the requisite components, then configures
+ *  pins and i2c frequency.
+ *
+ *  Defaults:
+ *    - 10 Mhz Open-drain GPIO
+ *    - 8 Mhz i2c clock with 1000 ns max rise time
+ */
+void i2c_init(i2c_bus_t bus)
+{
+    /* Clock Access */
+    RCC->APB2ENR |= bus.pin_1.port.clk_msk;
+    RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
+    RCC->APB1ENR |= bus.clk_msk;
+
+    /* Pin Config */
+    bus.pin_1.port.reg->CRL |= (1U << (bus.pin_1.pin * 4));	    /* 10 MHz */
+    bus.pin_1.port.reg->CRL |= (3U << (bus.pin_1.pin * 4 + 2));	    /* Open-drain */
+    
+    bus.pin_2.port.reg->CRL |= (1U << (bus.pin_2.pin * 4));	    /* 10 MHz */
+    bus.pin_2.port.reg->CRL |= (3U << (bus.pin_2.pin * 4 + 2));	    /* Open-drain */
+    
+    /* I2C Config */
+    bus.reg->CR2 &= ~(I2C_CR2_FREQ);				    /* Clear frequency reg */
+    bus.reg->CR2 |= (8U << I2C_CR2_FREQ_Pos);			    /* 8 MHz clock */
+
+    bus.reg->TRISE = 0x9;					    /* 1000 ns max rise time */
+
+    bus.reg->CCR |= 0x28;					    /* Clock control */
+
+    /* Enable peripherals */
+    bus.reg->CR1 |= I2C_CR1_PE;
+}
+
+/**
+ *  Scans the bus for all responsive addresses and prints them to stdout.
+ */
+void i2c_scan(i2c_bus_t bus)
+{
+    for (uint8_t address = 0U; address < 128; address++)
+    {
+	while(bus.reg->SR2 & I2C_SR2_BUSY);
+
+	bus.reg->CR1 |= I2C_CR1_START;
+	while (!(bus.reg->SR1 & I2C_SR1_SB));
+
+	bus.reg->DR = address << 1;
+	while (!(bus.reg->SR1)|!(bus.reg->SR2));    /* No errors or alerts (Not Missing NACK) */
+
+	bus.reg->CR1 |= I2C_CR1_STOP;
+	for (int k = 0; k < 100; k++);		    /* There is no easy way to check for a stop
+						     * condition, so a crude delay is used. */
+
+	if ((bus.reg->SR1 & I2C_SR1_ADDR) == 2)	    /* ACK recieved with no errors */
+	{
+	    dbg_log("Found I2C device at address 0x%X\n\r", address);
+	}
+    }
+}
+
+/**
+ *  Begins the first phase of all i2c communication.
+ *  
+ *  Transmits:
+ *    1. Start bit
+ *    2. Device address + write bit
+ *    3. Device memory address
+ */
+void i2c_phase_1(i2c_bus_t bus, uint8_t device_addr, uint8_t mem_addr)
+{
+    while (bus.reg->SR2 & I2C_SR2_BUSY);
+
+    bus.reg->CR1 |= I2C_CR1_START;
+    while (!(bus.reg->SR1 & I2C_SR1_SB));
+
+    bus.reg->DR = device_addr << 1;
+    while (!(bus.reg->SR1 & I2C_SR1_ADDR));
+    volatile int tmp = bus.reg->SR2;
+    (void)tmp;
+
+    while (!(bus.reg->SR1 & I2C_SR1_TXE));
+
+    bus.reg->DR = mem_addr;
+    while (!(bus.reg->SR1 & I2C_SR1_ADDR));
+}
+
+/**
+ *  Reads from an i2c device.
+ *
+ *  TODO: Error handling
+ */
+void i2c_read(i2c_bus_t bus, uint8_t device_addr, uint8_t mem_addr, int bytes, uint8_t *data)
+{
+    /*
+     *	1. Wait for empty bus
+     *	2. Start bit
+     *	3. Device address
+     *	4. Write bit
+     *	5. Memory address pointer
+     */
+    i2c_phase_1(bus, device_addr, mem_addr);
+
+    /*
+     *	6. Start bit
+     *	7. Device address
+     *	8. Read bit
+     *	9. Read byte
+     *	10. Stop condition / repeat at step 9
+     */
+
+    bus.reg->CR1 |= I2C_CR1_START;
+    while (!(bus.reg->SR1 & I2C_SR1_SB));
+
+    bus.reg->DR = device_addr << 1|1;
+    while (!(bus.reg->SR1 & I2C_SR1_ADDR));
+    volatile int tmp = bus.reg->SR2;
+    (void)tmp;
+
+    while (bytes > 0U)
+    {
+	if (bytes == 1U)
+	{
+	    bus.reg->CR1 |= I2C_CR1_STOP;
+	} 
+	
+	while (!(bus.reg->SR1 & I2C_SR1_RXNE));
+	*data++ = bus.reg->DR;
+	bytes--;
+    }
+}
+
+/**
+ *  Writes to an i2c device.
+ *
+ *  TODO: Error handling
+ */
+void i2c_write(i2c_bus_t bus, uint8_t device_addr, uint8_t mem_addr, int bytes, uint8_t *data)
+{
+    /*
+     *	1. Wait for empty bus
+     *	2. Start bit
+     *	3. Device address
+     *	4. Write bit
+     *	5. Memory address pointer
+     */
+    i2c_phase_1(bus, device_addr, mem_addr);
+
+    /*
+     *	6. Send byte
+     *	7. Stop condition / repeat step 6
+     */
+
+    while (bytes > 0U)
+    {
+	while (!(bus.reg->SR1 & I2C_SR1_TXE));
+	bus.reg->DR = *data++;
+	bytes--;
+    }
+
+    while (!(bus.reg->SR1 & I2C_SR1_BTF));
+    bus.reg->CR1 |= I2C_CR1_STOP;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* INITIALIZATION */
 

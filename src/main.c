@@ -1,24 +1,12 @@
 #include <stdint.h>
 
-#include "bmp390.h"
 #include "stm32f103x6.h"
-
-#include "i2c.h"
+#include "bmp390.h"
 #include "adafruit-BNO055.h"
+
+#include "debug.h"
 #include "util.h"
-
-#ifdef DEBUG
-#include <stdio.h>
-extern int initialise_monitor_handles();
-
-void dbg_log(char *str)
-{
-    printf("%s", str);
-    fflush(stdout);
-}
-#else
-void dbg_log(char *str) {}
-#endif
+#include "i2c.h"
 
 void bno055_setup(void)
 {
@@ -46,18 +34,14 @@ void bmp390_setup(void)
 
 int main(void)
 {
-
-#ifdef DEBUG
     initialise_monitor_handles();
-    printf("Started\n");
-#endif
 
     i2c1_init();
     i2c_scan_bus(I2C1);
     bno055_setup();
     bmp390_setup();
 
-    printf("[Main] begin data polling...");
+    dbg_log("[Main] begin data polling...");
     float acc_buffer[3];
     long poll_count = 0;
     float temperature = 0.0f;
@@ -77,8 +61,7 @@ int main(void)
 
 	altitude = noaa_altitude(pressure / 100);
 
-	printf("Altitude (NOAA): %lf ft\n", altitude);
-	fflush(stdout);
+	dbg_log("Altitude (NOAA): %lf ft\n", altitude);
 	poll_count++;
     }
 

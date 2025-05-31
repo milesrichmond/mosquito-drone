@@ -1,6 +1,9 @@
+#pragma once
 #ifndef UTIL_H
 #define UTIL_H
 
+#include "stm32f103x6.h"
+#include "types.h"
 #include <stdint.h>
 
 typedef struct {
