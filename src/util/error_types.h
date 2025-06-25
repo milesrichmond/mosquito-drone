@@ -27,6 +27,8 @@
  */
 
 #define I2C_GENERAL_ERROR   0x10
-#define I2C_CONFIG_ERROR    0x11
+#define I2C_TIMEOUT_ERROR    0x11
+#define I2C_NACK_ERROR      0x12
+#define I2C_CONFIG_ERROR    0x13
 
 #endif

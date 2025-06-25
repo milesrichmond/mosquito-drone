@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include "../util/error_types.h"
+#include "../mcu/types.h"
 
 #define BMP390_DEVICE_ADDRESS (0x77)
 
@@ -37,7 +38,7 @@ typedef enum {
  *
  * @return Non-zero value if the initialization or i2c read operation were unsuccessful.
  */
-error_t bmp390_init(uint32_t i2c_port_address);
+error_t bmp390_init(const i2c_bus_t bus);
 
 /**
  * @brief Configures the BMP390's power state.

@@ -7,6 +7,9 @@
  */
 
 #include "bmp390.h"
+
+#include "../mcu/i2c.h"
+#include "../mcu/types.h"
 #include <math.h>
 
 /*
@@ -98,14 +101,14 @@ typedef struct {
  *******************************************************************************
  */
 
-uint32_t I2C_PORT_ADDR = 0U;
+i2c_bus_t i2c_bus;
 calibration_t calib;
 uint8_t ctrl_state = 0U;
 
 error_t init_calibration(void)
 {
     uint8_t coef[21];
-    error_t err = i2c_read_burst(I2C_PORT_ADDR, BMP390_DEVICE_ADDRESS, TRIM_COEF_ADDR, 21, coef);
+    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, TRIM_COEF_ADDR, 21, coef);
     if (err)
     {
         return err;
@@ -131,7 +134,7 @@ error_t init_calibration(void)
     /* Convert to floating point */
 
     calib.T[0] = nvm.T1 * 256;
-    calib.T[1] = ((double)nvm.T2) / pow(2, 30);
+    calib.T[1] = ((double)nvm.T2) / pow(2, 30); /* These values could be hard-coded, but at a severe loss of readablity */
     calib.T[2] = ((double)nvm.T3) / pow(2, 48);
     calib.P[0] = ((double)nvm.P1 - pow(2, 14)) / pow(2, 20);
     calib.P[1] = ((double)nvm.P2 - pow(2, 14)) / pow(2, 29);
@@ -148,10 +151,9 @@ error_t init_calibration(void)
     return NO_ERROR;
 }
 
-error_t bmp390_init(uint32_t i2c_port_address)
+error_t bmp390_init(const i2c_bus_t bus)
 {
-    I2C_PORT_ADDR = i2c_port_address;
-
+    i2c_bus = bus;
     return init_calibration();
 }
 
@@ -173,7 +175,7 @@ error_t bmp390_set_pwr_mode(bmp390_pwr_mode_t mode)
             return INVALID_ARG;
     }
 
-    return i2c_write(I2C_PORT_ADDR, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, &ctrl_state);
+    return i2c_write(&i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, ctrl_state);
 }
 
 error_t bmp390_set_opr_mode(bmp390_opr_mode_t mode)
@@ -198,7 +200,7 @@ error_t bmp390_set_opr_mode(bmp390_opr_mode_t mode)
             return INVALID_ARG;
     }
 
-    return i2c_write(I2C_PORT_ADDR, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, &ctrl_state);
+    return i2c_write(&i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, ctrl_state);
 }
 
 /**
@@ -208,7 +210,7 @@ error_t bmp390_set_opr_mode(bmp390_opr_mode_t mode)
 error_t bmp390_read_temp_data(float *data)
 {
     uint8_t buffer[3];
-    error_t err = i2c_read_burst(I2C_PORT_ADDR, BMP390_DEVICE_ADDRESS, TEMP_DAT_XLSB_ADDR, 3, buffer);
+    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, TEMP_DAT_XLSB_ADDR, 3, buffer);
     if (err)
     {
         return err;
@@ -230,7 +232,7 @@ error_t bmp390_read_temp_data(float *data)
 error_t bmp390_read_pres_data(float temperature, float *data)
 {
     uint8_t buffer[3];
-    error_t err = i2c_read_burst(I2C_PORT_ADDR, BMP390_DEVICE_ADDRESS, PRES_DAT_XLSB_ADDR, 3, buffer);
+    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, PRES_DAT_XLSB_ADDR, 3, buffer);
     if (err)
     {
         return err;

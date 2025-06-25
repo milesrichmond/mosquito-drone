@@ -7,7 +7,8 @@
  */
 
 #include "bno055.h"
-#include "../mcu/i2c.c"
+#include "../mcu/i2c.h"
+#include "../mcu/types.h"
 
 /**
  *******************************************************************************
@@ -146,7 +147,7 @@ typedef enum {
  *******************************************************************************
  */
 
-uint32_t I2C_PORT_ADDR = 0;
+i2c_bus_t i2c_bus;
 bno055_opr_mode_t current_opr_mode; /*< Kept track of for error checking */
 
 char is_fusion_mode(void)
@@ -190,9 +191,9 @@ char sensor_data_available(bno055_sensor_data_t sensor)
     }
 }
 
-error_t bno055_init(uint32_t i2c_port_address)
+error_t bno055_init(i2c_bus_t bus)
 {
-    I2C_PORT_ADDR = i2c_port_address;
+    i2c_bus = bus;
 
     /* check if i2c is valid */
 
@@ -222,7 +223,7 @@ error_t bno055_set_pwr_mode(bno055_pwr_mode_t mode)
         return INVALID_ARG;
     }
 
-    return i2c_write(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, PWR_MODE_ADDR, reg_value);
+    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, PWR_MODE_ADDR, reg_value);
 }
 
 error_t bno055_set_opr_mode(bno055_opr_mode_t mode)
@@ -285,7 +286,7 @@ error_t bno055_set_opr_mode(bno055_opr_mode_t mode)
 
     current_opr_mode = mode;
 
-    return i2c_write(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, OPR_MODE_ADDR, reg_value);
+    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, OPR_MODE_ADDR, reg_value);
 }
 
 error_t bno055_remap_axis(char remap_config, char remap_sign)
@@ -297,8 +298,8 @@ error_t bno055_remap_axis(char remap_config, char remap_sign)
      * return the i2c function's error code
      */
 
-    uint16_t concatenated_config = ((uint16_t)remap_config) | (((uint16_t)remap_sign) << 8);
-    return i2c_write_burst(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, AXIS_MAP_CONFIG_ADDR, 2, &concatenated_config);
+    uint8_t config[2] = { remap_sign, remap_config };
+    return i2c_write_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, AXIS_MAP_CONFIG_ADDR, 2, config);
 }
 
 error_t bno055_acc_set_opr_mode(char opr_mode)
@@ -318,7 +319,7 @@ error_t bno055_mag_set_opr_mode(char opr_mode)
 
 error_t bno055_set_unit(char unit_config)
 {
-    return i2c_write(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, UNIT_SEL_ADDR, unit_config);
+    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, UNIT_SEL_ADDR, unit_config);
 }
 
 /**
@@ -330,7 +331,7 @@ error_t bno055_set_unit(char unit_config)
 error_t bno055_read_quat(float *data)
 {
     uint8_t buffer[8];
-    error_t err = i2c_read_burst(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, QUAT_DAT_W_LSB_ADDR, 8, buffer);
+    error_t err = i2c_read_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, QUAT_DAT_W_LSB_ADDR, 8, buffer);
 
     if (err)
     {
@@ -353,7 +354,7 @@ error_t bno055_read_quat(float *data)
 error_t bno055_read_vector(uint8_t reg, float unit_conversion, float *data)
 {
     uint8_t buffer[6];
-    error_t err = i2c_read_burst(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, reg, 6, buffer);
+    error_t err = i2c_read_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, reg, 6, buffer);
 
     if (err)
     {
@@ -383,7 +384,7 @@ error_t bno055_read_vector(uint8_t reg, float unit_conversion, float *data)
 error_t bno055_read_temp(float *data)
 {
     uint8_t buffer;
-    error_t err = i2c_read(I2C_PORT_ADDR, BNO055_DEVICE_ADDRESS, TEMP_DAT_ADDR, &buffer);
+    error_t err = i2c_read(&i2c_bus, BNO055_DEVICE_ADDRESS, TEMP_DAT_ADDR, &buffer);
 
     if (err)
     {
