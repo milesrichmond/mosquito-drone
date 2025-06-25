@@ -2,27 +2,37 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "stm32f103x6.h"
-#include "types.h"
 #include <stdint.h>
 
 typedef struct {
-    float roll;
-    float pitch;
-    float yaw;
-} drone_orientation;
+    float w;
+    float x;
+    float y;
+    float z;
+} drone_vec4;
 
 typedef struct {
     int8_t x;
     int8_t y;
     int8_t z;
-} drone_vector;
+} drone_vec3;
 
 typedef struct {
-    drone_orientation orientation;
-    drone_vector velocity;
+    drone_vec4 orientation;
+    drone_vec3 velocity;
     uint16_t altitude;
 } drone_state;
+
+/**
+ *  Convert the supplied quaternion into an euler equivalent.
+ */
+drone_vec3 euler_value(drone_vec4 quat);
+
+/**
+ *  Calculates the requisite quaternion to rotate the current
+ *  orientation by to reach the target orientation
+ */
+drone_vec4 quat_error(drone_vec4 current, drone_vec4 target);
 
 /**
  *  Converts the supplied pressure (hPa/mb) into a calculated altitude

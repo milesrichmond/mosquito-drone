@@ -4,7 +4,7 @@
 #include<stdint.h>
 #include "stm32f103x6.h"
 
-#include "util.h"
+#include "types.h"
 
 typedef enum {
     ADC_CONFIG_SIMULTANEOUS,

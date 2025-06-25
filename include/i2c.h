@@ -1,7 +1,7 @@
 #ifndef I2C_H
 #define I2C_H
 
-#include "stm32f103x6.h"
+#include "CMSIS/Device/ST/STM32F1xx/Include/stm32f103x6.h"
 #include "types.h"
 #include <stdint.h>
 
