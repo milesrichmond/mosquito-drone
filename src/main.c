@@ -46,14 +46,14 @@ int main(void)
 
     while (1)
     {
-	i2c_burst_read(I2C1_BASE, BNO055_DEVICE_ADDR, 0x20, 8, quat);
+    i2c_burst_read(I2C1_BASE, BNO055_DEVICE_ADDR, 0x20, 8, quat);
 
-	int16_t w = ((uint16_t)quat[1]) << 8 | ((uint16_t)quat[0]);
-	int16_t x = ((uint16_t)quat[3]) << 8 | ((uint16_t)quat[2]);
-	int16_t y = ((uint16_t)quat[5]) << 8 | ((uint16_t)quat[4]);
-	int16_t z = ((uint16_t)quat[7]) << 8 | ((uint16_t)quat[6]);
+    int16_t w = ((uint16_t)quat[1]) << 8 | ((uint16_t)quat[0]);
+    int16_t x = ((uint16_t)quat[3]) << 8 | ((uint16_t)quat[2]);
+    int16_t y = ((uint16_t)quat[5]) << 8 | ((uint16_t)quat[4]);
+    int16_t z = ((uint16_t)quat[7]) << 8 | ((uint16_t)quat[6]);
 
-	dbg_log("w:%d     x:%d    ty:%d     z:%d\n", w, x, y, z);
+    dbg_log("w:%d     x:%d    ty:%d     z:%d\n", w, x, y, z);
     }
 
     return 0;
