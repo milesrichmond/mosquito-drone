@@ -25,15 +25,6 @@ typedef struct {
 } gpio_pin_t;
 
 typedef struct {
-    TIM_TypeDef *reg;
-    uint32_t rcc_clk_mask;
-    gpio_pin_t pin;
-
-    uint16_t prescaler;
-    uint16_t auto_reload;
-} timer_t;
-
-typedef struct {
     I2C_TypeDef *reg;
     uint32_t rcc_clk_mask;
     gpio_pin_t pin_1;
@@ -50,15 +41,5 @@ typedef struct {
 extern const gpio_port_t GPIO_PA;
 extern const gpio_port_t GPIO_PB;
 extern const gpio_port_t GPIO_PC;
-
-extern const timer_t TIMER_1; /*< Advanced control timer */
-extern const timer_t TIMER_2;
-extern const timer_t TIMER_3;
-extern const timer_t TIMER_4;
-extern const timer_t TIMER_5;
-extern const timer_t TIMER_6;
-extern const timer_t TIMER_7;
-extern const timer_t TIMER_8; /*< Advanced control timer */
-
 
 #endif
