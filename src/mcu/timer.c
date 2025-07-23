@@ -1,9 +1,9 @@
 /**
- ************************************************************************************************
+ *******************************************************************************
  * @file    timer.c
  * @author  Miles Richmond (milesf.richmond@gmail.com)
  * @brief   Abstraction layer for timers on stm32.
- ************************************************************************************************
+ *******************************************************************************
  */
 
 #include "timer.h"
@@ -39,4 +39,59 @@ void tim_disable(timer_t tim)
 void tim_clear_uif(timer_t tim)
 {
     tim.reg->SR &= ~(TIM_SR_UIF);
+}
+
+/*
+ *******************************************************************************
+ *
+ * Timer definitions
+ *
+ *******************************************************************************
+ */
+
+/*
+ *******************************************************************************
+ *
+ * Interrupt Handlers
+ *
+ *******************************************************************************
+ */
+
+void TIM_default_handler(void) {}
+
+/* TIM2-5 */
+void (*GP_IRQHandler[4])(void) = { TIM_default_handler, TIM_default_handler,
+                                    TIM_default_handler, TIM_default_handler };
+
+/*
+ * Something about these screams security issue. Just need to be careful when
+ * changing them by user input. Otherwise, if treating this as a separate
+ * library/module, this shouldn't concern us.
+ */
+void set_GP_IRQHandler(const uint8_t tim_number, void (*callback)(void))
+{
+    if (tim_number - 2 > 3)
+        return;
+
+    GP_IRQHandler[tim_number - 2] = callback;
+}
+
+void TIM2_IRQHandler(void)
+{
+    GP_IRQHandler[0]();
+}
+
+void TIM3_IRQHandler(void)
+{
+    GP_IRQHandler[1]();
+}
+
+void TIM4_IRQHandler(void)
+{
+    GP_IRQHandler[2]();
+}
+
+void TIM5_IRQHandler(void)
+{
+    GP_IRQHandler[3]();
 }

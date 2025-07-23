@@ -6,8 +6,6 @@
  ************************************************************************************************
  */
 
-#include "types.h"
-
 #include <CMSIS/Device/ST/STM32F1xx/Include/stm32f103x6.h>
 
 /* The stm32f103c8t6 has a SYSCLK of 72 Mhz max, which is scaled down through various
@@ -36,10 +34,12 @@ extern const timer_t TIM_6;
 extern const timer_t TIM_7;
 extern const timer_t TIM_8;
 
-void tim_init(timer_t tim);
+void tim_init(timer_t *tim);
 
-void tim_enable(timer_t tim);
+void tim_enable(timer_t *tim);
 
-void tim_disable(timer_t tim);
+void tim_disable(timer_t *tim);
 
 void tim_clear_uif(timer_t tim);
+
+void set_GP_IRQHandler(const uint8_t tim_number, void (*callback)(void));
