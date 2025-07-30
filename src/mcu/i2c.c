@@ -9,7 +9,7 @@
 #include "i2c.h"
 
 #include "../util/debug.h"
-#include <CMSIS/Device/ST/STM32F1xx/Include/stm32f103x6.h>
+#include <stm32f103x6.h>
 
 #define TIMEOUT 10000
 

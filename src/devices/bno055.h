@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include "../util/error_types.h"
+#include "../mcu/types.h"
 
 #define BNO055_DEVICE_ADDRESS (0x28)
 
@@ -59,7 +60,7 @@ typedef enum {
  *
  * @return Non-zero value if the initialization is unsuccessful.
  */
-error_t bno055_init(uint32_t i2c_port_address);
+error_t bno055_init(i2c_bus_t bus);
 
 /**
  * @brief Configures the BNO055's power state.

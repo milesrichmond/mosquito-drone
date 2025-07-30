@@ -9,7 +9,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <CMSIS/Device/ST/STM32F1xx/Include/stm32f103x6.h>
+#include <stm32f103x6.h>
 #include <stdint.h>
 
 /* tbh, these should go into their respective modules */
