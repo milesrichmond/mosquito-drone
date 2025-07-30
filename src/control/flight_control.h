@@ -10,6 +10,7 @@
 #define FLIGHT_CONTROL_H
 
 #include "../util/quaternion.h"
+#include "parameters.h"
 
 typedef struct {
     float motor_f; /* front (CCW) */
@@ -25,7 +26,7 @@ typedef struct {
  * motors, since some wiggle room must be left for the balancing offsets.
  * E.g. throttle=1.0 does not mean maximum motor speed.
  *
- * @param value Percent throttle (0.0-1.0).
+ * @param value Percent throttle (0.0-THROTTLE_MAX).
  */
 void set_throttle(const float value);
 
