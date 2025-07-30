@@ -65,7 +65,7 @@ typedef enum {
 /*
  *******************************************************************************
  *
- * Calibration Types
+ * bmp390_calibration Types
  *
  *******************************************************************************
  */
@@ -91,7 +91,7 @@ typedef struct {
 typedef struct {
     double T[3];
     double P[11];
-} calibration_t;
+} bmp390_calibration_t;
 
 /*
  *******************************************************************************
@@ -101,14 +101,14 @@ typedef struct {
  *******************************************************************************
  */
 
-i2c_bus_t i2c_bus;
-calibration_t calib;
-uint8_t ctrl_state = 0U;
+i2c_bus_t bmp390_i2c_bus;
+bmp390_calibration_t bmp390_calib;
+uint8_t bmp390_ctrl_state = 0U;
 
 error_t init_calibration(void)
 {
     uint8_t coef[21];
-    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, TRIM_COEF_ADDR, 21, coef);
+    error_t err = i2c_read_burst(&bmp390_i2c_bus, BMP390_DEVICE_ADDRESS, TRIM_COEF_ADDR, 21, coef);
     if (err)
     {
         return err;
@@ -133,27 +133,27 @@ error_t init_calibration(void)
 
     /* Convert to floating point */
 
-    calib.T[0] = nvm.T1 * 256;
-    calib.T[1] = ((double)nvm.T2) / pow(2, 30); /* These values could be hard-coded, but at a severe loss of readablity */
-    calib.T[2] = ((double)nvm.T3) / pow(2, 48);
-    calib.P[0] = ((double)nvm.P1 - pow(2, 14)) / pow(2, 20);
-    calib.P[1] = ((double)nvm.P2 - pow(2, 14)) / pow(2, 29);
-    calib.P[2] = ((double)nvm.P3) / pow(2, 32);
-    calib.P[3] = ((double)nvm.P4) / pow(2, 37);
-    calib.P[4] = ((double)nvm.P5) * pow(2, 3);
-    calib.P[5] = ((double)nvm.P6) / pow(2, 6);
-    calib.P[6] = ((double)nvm.P7) / pow(2, 8);
-    calib.P[7] = ((double)nvm.P8) / pow(2, 15);
-    calib.P[8] = ((double)nvm.P9) / pow(2, 48);
-    calib.P[9] = ((double)nvm.P10) / pow(2, 48);
-    calib.P[10] = ((double)nvm.P11) / pow(2, 65); /* dividing by 36 quintillion ._. */
+    bmp390_calib.T[0] = nvm.T1 * 256;
+    bmp390_calib.T[1] = ((double)nvm.T2) / pow(2, 30); /* These values could be hard-coded, but at a severe loss of readablity */
+    bmp390_calib.T[2] = ((double)nvm.T3) / pow(2, 48);
+    bmp390_calib.P[0] = ((double)nvm.P1 - pow(2, 14)) / pow(2, 20);
+    bmp390_calib.P[1] = ((double)nvm.P2 - pow(2, 14)) / pow(2, 29);
+    bmp390_calib.P[2] = ((double)nvm.P3) / pow(2, 32);
+    bmp390_calib.P[3] = ((double)nvm.P4) / pow(2, 37);
+    bmp390_calib.P[4] = ((double)nvm.P5) * pow(2, 3);
+    bmp390_calib.P[5] = ((double)nvm.P6) / pow(2, 6);
+    bmp390_calib.P[6] = ((double)nvm.P7) / pow(2, 8);
+    bmp390_calib.P[7] = ((double)nvm.P8) / pow(2, 15);
+    bmp390_calib.P[8] = ((double)nvm.P9) / pow(2, 48);
+    bmp390_calib.P[9] = ((double)nvm.P10) / pow(2, 48);
+    bmp390_calib.P[10] = ((double)nvm.P11) / pow(2, 65); /* dividing by 36 quintillion ._. */
 
     return NO_ERROR;
 }
 
 error_t bmp390_init(const i2c_bus_t bus)
 {
-    i2c_bus = bus;
+    bmp390_i2c_bus = bus;
     return init_calibration();
 }
 
@@ -162,20 +162,20 @@ error_t bmp390_set_pwr_mode(bmp390_pwr_mode_t mode)
     switch (mode)
     {
         case BMP390_PWR_NORMAL:
-            ctrl_state |= (3U << 4);
+           bmp390_ctrl_state |= (3U << 4);
             break;
         case BMP390_PWR_FORCED:
-            ctrl_state &= ~(1U << 5);
-            ctrl_state |= (1U << 4);
+           bmp390_ctrl_state &= ~(1U << 5);
+           bmp390_ctrl_state |= (1U << 4);
             break;
         case BMP390_PWR_SLEEP:
-            ctrl_state &= ~(3U << 4);
+           bmp390_ctrl_state &= ~(3U << 4);
             break;
         default:
             return INVALID_ARG;
     }
 
-    return i2c_write(&i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, ctrl_state);
+    return i2c_write(&bmp390_i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR,bmp390_ctrl_state);
 }
 
 error_t bmp390_set_opr_mode(bmp390_opr_mode_t mode)
@@ -183,34 +183,34 @@ error_t bmp390_set_opr_mode(bmp390_opr_mode_t mode)
     switch (mode)
     {
         case BMP390_OPR_NONE:
-            ctrl_state &= ~(3U << 0);
+           bmp390_ctrl_state &= ~(3U << 0);
             break;
         case BMP390_OPR_PRES:
-            ctrl_state |= (1U << 0);
-            ctrl_state &= ~(1U << 1);
+           bmp390_ctrl_state |= (1U << 0);
+           bmp390_ctrl_state &= ~(1U << 1);
             break;
         case BMP390_OPR_TEMP:
-            ctrl_state &= ~(1U << 0);
-            ctrl_state |= (1U << 1);
+           bmp390_ctrl_state &= ~(1U << 0);
+           bmp390_ctrl_state |= (1U << 1);
             break;
         case BMP390_OPR_BOTH:
-            ctrl_state |= (3U << 0);
+           bmp390_ctrl_state |= (3U << 0);
             break;
         default:
             return INVALID_ARG;
     }
 
-    return i2c_write(&i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR, ctrl_state);
+    return i2c_write(&bmp390_i2c_bus, BMP390_DEVICE_ADDRESS, PWR_CTRL_ADDR,bmp390_ctrl_state);
 }
 
 /**
- * The BMP390's user manual dictates the calibration operations that must be performed.
+ * The BMP390's user manual dictates the bmp390_calibration operations that must be performed.
  * They are reflected in this implementation.
  */
 error_t bmp390_read_temp_data(float *data)
 {
     uint8_t buffer[3];
-    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, TEMP_DAT_XLSB_ADDR, 3, buffer);
+    error_t err = i2c_read_burst(&bmp390_i2c_bus, BMP390_DEVICE_ADDRESS, TEMP_DAT_XLSB_ADDR, 3, buffer);
     if (err)
     {
         return err;
@@ -218,21 +218,21 @@ error_t bmp390_read_temp_data(float *data)
 
     uint32_t raw_data = ((uint32_t)buffer[0]) | ((uint32_t)buffer[1] << 8) | ((uint32_t)buffer[2] << 16);
 
-    float part_1 = (float)(raw_data - calib.T[0]);
-    float part_2 = (float)(part_1 * calib.T[1]);
-    *data = part_2 + (part_1 * part_1) * calib.T[2];
+    float part_1 = (float)(raw_data - bmp390_calib.T[0]);
+    float part_2 = (float)(part_1 * bmp390_calib.T[1]);
+    *data = part_2 + (part_1 * part_1) * bmp390_calib.T[2];
 
     return NO_ERROR;
 }
 
 /**
- * The BMP390's user manual dictates the calibration operations that must be performed.
+ * The BMP390's user manual dictates the bmp390_calibration operations that must be performed.
  * They are reflected in this implementation.
  */
 error_t bmp390_read_pres_data(float temperature, float *data)
 {
     uint8_t buffer[3];
-    error_t err = i2c_read_burst(&i2c_bus, BMP390_DEVICE_ADDRESS, PRES_DAT_XLSB_ADDR, 3, buffer);
+    error_t err = i2c_read_burst(&bmp390_i2c_bus, BMP390_DEVICE_ADDRESS, PRES_DAT_XLSB_ADDR, 3, buffer);
     if (err)
     {
         return err;
@@ -245,20 +245,20 @@ error_t bmp390_read_pres_data(float temperature, float *data)
     float temperature_sq = temperature * temperature; /* reduce floating point multiplication */
     float temperature_cb = temperature_sq * temperature; /* reduce floating point multiplication */
 
-    tmp_1 = calib.P[5] * temperature;
-    tmp_2 = calib.P[6] * temperature_sq;
-    tmp_3 = calib.P[7] * temperature_cb;
-    part_1 = calib.P[4] + tmp_1 + tmp_2 + tmp_3;
+    tmp_1 = bmp390_calib.P[5] * temperature;
+    tmp_2 = bmp390_calib.P[6] * temperature_sq;
+    tmp_3 = bmp390_calib.P[7] * temperature_cb;
+    part_1 = bmp390_calib.P[4] + tmp_1 + tmp_2 + tmp_3;
 
-    tmp_1 = calib.P[1] * temperature;
-    tmp_2 = calib.P[2] * temperature_sq;
-    tmp_3 = calib.P[3] * temperature_cb;
-    part_2 = (float)raw_data * (calib.P[0] + tmp_1 + tmp_2 + tmp_3);
+    tmp_1 = bmp390_calib.P[1] * temperature;
+    tmp_2 = bmp390_calib.P[2] * temperature_sq;
+    tmp_3 = bmp390_calib.P[3] * temperature_cb;
+    part_2 = (float)raw_data * (bmp390_calib.P[0] + tmp_1 + tmp_2 + tmp_3);
 
     tmp_1 = (float)raw_data * (float)raw_data;
-    tmp_2 = calib.P[8] + calib.P[9] * temperature;
+    tmp_2 = bmp390_calib.P[8] + bmp390_calib.P[9] * temperature;
     tmp_3 = tmp_1 * tmp_2;
-    part_3 = tmp_3 + ((float)raw_data * (float)raw_data * (float)raw_data) * calib.P[10];
+    part_3 = tmp_3 + ((float)raw_data * (float)raw_data * (float)raw_data) * bmp390_calib.P[10];
 
     *data = part_1 + part_2 + part_3;
 

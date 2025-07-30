@@ -9,6 +9,7 @@
 #include "bno055.h"
 #include "../mcu/i2c.h"
 #include "../mcu/types.h"
+#include "../util/error_types.h"
 
 /**
  *******************************************************************************
@@ -147,21 +148,21 @@ typedef enum {
  *******************************************************************************
  */
 
-i2c_bus_t i2c_bus;
-bno055_opr_mode_t current_opr_mode; /*< Kept track of for error checking */
+i2c_bus_t bno055_i2c_bus;
+bno055_opr_mode_t bno055_current_opr_mode; /*< Kept track of for error checking */
 
 char is_fusion_mode(void)
 {
-    return (current_opr_mode == BNO055_OPR_IMU ||
-        current_opr_mode == BNO055_OPR_COMP ||
-        current_opr_mode == BNO055_OPR_M4G ||
-        current_opr_mode == BNO055_OPR_NDOF_FMC_OFF ||
-        current_opr_mode == BNO055_OPR_NDOF);
+    return (bno055_current_opr_mode == BNO055_OPR_IMU ||
+       bno055_current_opr_mode == BNO055_OPR_COMP ||
+       bno055_current_opr_mode == BNO055_OPR_M4G ||
+       bno055_current_opr_mode == BNO055_OPR_NDOF_FMC_OFF ||
+       bno055_current_opr_mode == BNO055_OPR_NDOF);
 }
 
 char sensor_data_available(bno055_sensor_data_t sensor)
 {
-    if (is_fusion_mode() || current_opr_mode == BNO055_OPR_AMG)
+    if (is_fusion_mode() ||bno055_current_opr_mode == BNO055_OPR_AMG)
     {
     return 1;
     }
@@ -169,23 +170,23 @@ char sensor_data_available(bno055_sensor_data_t sensor)
     switch (sensor)
     {
     case BNO055_DAT_ACCEL:
-        return (current_opr_mode == BNO055_OPR_ACC ||
-            current_opr_mode == BNO055_OPR_ACCMAG ||
-            current_opr_mode == BNO055_OPR_ACCGYR);
+        return (bno055_current_opr_mode == BNO055_OPR_ACC ||
+           bno055_current_opr_mode == BNO055_OPR_ACCMAG ||
+           bno055_current_opr_mode == BNO055_OPR_ACCGYR);
     case BNO055_DAT_MAG:
-        return (current_opr_mode == BNO055_OPR_MAG ||
-            current_opr_mode == BNO055_OPR_ACCMAG ||
-            current_opr_mode == BNO055_OPR_MAGGYR);
+        return (bno055_current_opr_mode == BNO055_OPR_MAG ||
+           bno055_current_opr_mode == BNO055_OPR_ACCMAG ||
+           bno055_current_opr_mode == BNO055_OPR_MAGGYR);
     case BNO055_DAT_GYR:
-        return (current_opr_mode == BNO055_OPR_GYR ||
-            current_opr_mode == BNO055_OPR_ACCGYR ||
-            current_opr_mode == BNO055_OPR_MAGGYR);
+        return (bno055_current_opr_mode == BNO055_OPR_GYR ||
+           bno055_current_opr_mode == BNO055_OPR_ACCGYR ||
+           bno055_current_opr_mode == BNO055_OPR_MAGGYR);
     /* Temperature is tricky, since we have two sources. For now,
      * it will be constrained to having both sensors enabled.
      * In the future, the value of the TEMP_SOURCE register should
      * be tracked locally. */
     case BNO055_DAT_TEMP:
-        return (current_opr_mode == BNO055_OPR_ACCGYR);
+        return (bno055_current_opr_mode == BNO055_OPR_ACCGYR);
     default: /*< The default case should never happen */
         return 1;
     }
@@ -193,7 +194,7 @@ char sensor_data_available(bno055_sensor_data_t sensor)
 
 error_t bno055_init(i2c_bus_t bus)
 {
-    i2c_bus = bus;
+    bno055_i2c_bus = bus;
 
     /* check if i2c is valid */
 
@@ -223,7 +224,7 @@ error_t bno055_set_pwr_mode(bno055_pwr_mode_t mode)
         return INVALID_ARG;
     }
 
-    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, PWR_MODE_ADDR, reg_value);
+    return i2c_write(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, PWR_MODE_ADDR, reg_value);
 }
 
 error_t bno055_set_opr_mode(bno055_opr_mode_t mode)
@@ -284,9 +285,9 @@ error_t bno055_set_opr_mode(bno055_opr_mode_t mode)
         return INVALID_ARG;
     }
 
-    current_opr_mode = mode;
+   bno055_current_opr_mode = mode;
 
-    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, OPR_MODE_ADDR, reg_value);
+    return i2c_write(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, OPR_MODE_ADDR, reg_value);
 }
 
 error_t bno055_remap_axis(char remap_config, char remap_sign)
@@ -299,27 +300,27 @@ error_t bno055_remap_axis(char remap_config, char remap_sign)
      */
 
     uint8_t config[2] = { remap_sign, remap_config };
-    return i2c_write_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, AXIS_MAP_CONFIG_ADDR, 2, config);
+    return i2c_write_burst(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, AXIS_MAP_CONFIG_ADDR, 2, config);
 }
 
 error_t bno055_acc_set_opr_mode(char opr_mode)
 {
-
+    return NO_ERROR;
 }
 
 error_t bno055_gyr_set_opr_mode(char opr_mode)
 {
-
+    return NO_ERROR;
 }
 
 error_t bno055_mag_set_opr_mode(char opr_mode)
 {
-
+    return NO_ERROR;
 }
 
 error_t bno055_set_unit(char unit_config)
 {
-    return i2c_write(&i2c_bus, BNO055_DEVICE_ADDRESS, UNIT_SEL_ADDR, unit_config);
+    return i2c_write(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, UNIT_SEL_ADDR, unit_config);
 }
 
 /**
@@ -331,7 +332,7 @@ error_t bno055_set_unit(char unit_config)
 error_t bno055_read_quat(float *data)
 {
     uint8_t buffer[8];
-    error_t err = i2c_read_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, QUAT_DAT_W_LSB_ADDR, 8, buffer);
+    error_t err = i2c_read_burst(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, QUAT_DAT_W_LSB_ADDR, 8, buffer);
 
     if (err)
     {
@@ -354,7 +355,7 @@ error_t bno055_read_quat(float *data)
 error_t bno055_read_vector(uint8_t reg, float unit_conversion, float *data)
 {
     uint8_t buffer[6];
-    error_t err = i2c_read_burst(&i2c_bus, BNO055_DEVICE_ADDRESS, reg, 6, buffer);
+    error_t err = i2c_read_burst(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, reg, 6, buffer);
 
     if (err)
     {
@@ -384,7 +385,7 @@ error_t bno055_read_vector(uint8_t reg, float unit_conversion, float *data)
 error_t bno055_read_temp(float *data)
 {
     uint8_t buffer;
-    error_t err = i2c_read(&i2c_bus, BNO055_DEVICE_ADDRESS, TEMP_DAT_ADDR, &buffer);
+    error_t err = i2c_read(&bno055_i2c_bus, BNO055_DEVICE_ADDRESS, TEMP_DAT_ADDR, &buffer);
 
     if (err)
     {

@@ -1,15 +1,16 @@
 /**
- ************************************************************************************************
+ *******************************************************************************
  * @file    flight_control.c
  * @author  Miles Richmond (milesf.richmond@gmail.com)
- * @brief   .
- ************************************************************************************************
+ * @brief   Control interface for the mosquito-drone project.
+ *******************************************************************************
  */
 
 #include "flight_control.h"
 #include "parameters.h"
 
 #include <stdint.h>
+#include <math.h>
 
 float throttle = 0.0f;
 duty_cycle_t duty;
@@ -23,14 +24,14 @@ quaternion_t control_axis = { .w = 1.0f, .x = 0.0f, .y = 0.0f, .z = 0.0f };
 
 void set_throttle(const float value)
 {
-    throttle = value;
+    throttle = fmax(0.0f, fmin(value, THROTTLE_MAX));
 }
 
 void adjust_control_axis(const float pitch, const float roll, const float yaw)
 {
     euler_t euler = { .pitch = pitch, .roll = roll, .yaw = yaw};
     quaternion_t rotation;
-    quaternion_t old_axis = control_axis;
+    quaternion_t old_axis = control_axis; /* need copy for multiplication */
 
     quat(&euler, &rotation);
     quat_mult(&old_axis, &rotation, &control_axis);

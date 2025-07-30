@@ -6,7 +6,10 @@
  ************************************************************************************************
  */
 
-#include "types.h"
+#ifndef TIMER_H
+#define TIMER_H
+
+#include <stm32f103x6.h>
 
 /* The stm32f103c8t6 has a SYSCLK of 72 Mhz max, which is scaled down through various
  * prescalers to each of the timers and clocks throughout the system.
@@ -16,10 +19,32 @@
  * frequency (hz) = (Timer clock) / ((prescaler + 1) * (auto-reset + 1))
  */
 
-void tim_init(timer_t tim);
+typedef struct timer_t
+{
+    TIM_TypeDef *reg;
+    uint32_t rcc_clk_mask;
 
-void tim_enable(timer_t tim);
+    uint16_t prescaler;
+    uint16_t auto_reload;
+} timer_t;
 
-void tim_disable(timer_t tim);
+extern const timer_t TIM_1;
+extern const timer_t TIM_2;
+extern const timer_t TIM_3;
+extern const timer_t TIM_4;
+extern const timer_t TIM_5;
+extern const timer_t TIM_6;
+extern const timer_t TIM_7;
+extern const timer_t TIM_8;
+
+void tim_init(timer_t *tim);
+
+void tim_enable(timer_t *tim);
+
+void tim_disable(timer_t *tim);
 
 void tim_clear_uif(timer_t tim);
+
+void set_GP_IRQHandler(const uint8_t tim_number, void (*callback)(void));
+
+#endif
